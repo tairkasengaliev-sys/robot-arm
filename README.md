@@ -40,3 +40,4 @@ industrial_ai_hub/
 
 - **Deliverables**: Google Sheets, Slides (облачные, доступные пользователю)
 - **Intermediates**: `.tmp/` (временные, регенерируемые)
+# robot-arm
