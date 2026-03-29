@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1a2e"
+    tools:context=".MainActivity">
+
+    <!-- Камера -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/controlPanel" />
+
+    <!-- Панель управления -->
+    <LinearLayout
+        android:id="@+id/controlPanel"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="#16213e"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Статус -->
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Статус: Отключено"
+            android:textColor="#00ff88"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Кнопки -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btnConnect"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="BT"
+                android:textSize="10sp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnHome"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="🏠"
+                android:textSize="14sp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnGrip"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="✊"
+                android:textSize="14sp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnOpen"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="🖐"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Слайдеры -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Большой палец -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="👍"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderThumb"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueThumb"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Указательный -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="☝️"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderIndex"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueIndex"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Средний -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="🖕"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderMiddle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueMiddle"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Безымянный -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="💍"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderRing"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueRing"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Мизинец -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="🤙"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderPinky"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valuePinky"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Запястье -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="💫"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderWrist"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueWrist"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Локоть -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="📐"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderElbow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueElbow"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Плечо -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="wrap_content"
+                        android:text="📍"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderShoulder"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:valueFrom="0"
+                        android:valueTo="180"
+                        android:stepSize="1" />
+                    <TextView
+                        android:id="@+id/valueShoulder"
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:text="90°"
+                        android:textColor="#ffffff"
+                        android:textSize="12sp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
