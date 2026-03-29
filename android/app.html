@@ -27,12 +27,29 @@
             z-index: 10;
         }
         .header h1 { font-size: 22px; margin-bottom: 5px; }
-        .status { 
-            color: #ff6b6b; 
-            font-size: 13px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-camera {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #0f3460;
+            color: #fff;
+            transition: all 0.15s;
+        }
+        .btn-camera:active { transform: scale(0.9); }
+        .status {
+            color: #ff6b6b;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 5px;
         }
         .status.connected { color: #00ff88; }
@@ -200,7 +217,10 @@
 </head>
 <body>
     <div class="header">
-        <h1>🦾 Роборука</h1>
+        <div class="header-top">
+            <h1>🦾 Роборука</h1>
+            <button class="btn-camera" id="btnCamera" title="Сменить камеру">📷</button>
+        </div>
         <div class="status" id="status">
             <span id="statusText">Отключено</span>
         </div>
@@ -447,20 +467,29 @@
         });
         
         hands.onResults(onResults);
-        
+
         // Камера
+        let currentCamera = 'user'; // 'user' или 'environment'
+        let currentStream = null;
+
         async function startCamera() {
+            // Остановить предыдущую камеру
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: 'user',
+                    video: {
+                        facingMode: currentCamera,
                         width: { ideal: 640 },
                         height: { ideal: 480 }
                     }
                 });
                 video.srcObject = stream;
-                log('✓ Камера запущена');
-                
+                currentStream = stream;
+                log(`✓ Камера запущена (${currentCamera === 'user' ? 'фронтальная' : 'задняя'})`);
+
                 // Обработка
                 const process = async () => {
                     if (video.readyState >= 2) {
@@ -469,18 +498,25 @@
                     requestAnimationFrame(process);
                 };
                 process();
-                
+
             } catch (err) {
                 log(`✗ Камера: ${err.message}`);
                 noHandMsg.textContent = 'Нет доступа к камере 📵';
             }
         }
-        
+
+        // Переключение камеры
+        document.getElementById('btnCamera').onclick = function() {
+            currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+            log(`Переключение на ${currentCamera === 'user' ? 'фронтальную' : 'заднюю'}...`);
+            startCamera();
+        };
+
         // PWA - установка приложения
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
-        
+
         // Старт
         log('Запуск...');
         startCamera();
