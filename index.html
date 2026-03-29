@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>🦾 Роборука</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 5px; }
+        .status { 
+            color: #ff6b6b; 
+            font-size: 13px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 5px;
+        }
+        .status.connected { color: #00ff88; }
+        .status::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .camera-section {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .no-hand {
+            position: absolute;
+            color: #666;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .control-panel {
+            width: 280px;
+            background: #16213e;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #0f3460;
+        }
+        
+        .quick-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 12px;
+            background: #0f3460;
+        }
+        .btn {
+            padding: 12px 8px;
+            border: none;
+            border-radius: 10px;
+            font-size: 22px;
+            cursor: pointer;
+            background: #1a1a2e;
+            color: #fff;
+            transition: all 0.15s;
+            touch-action: manipulation;
+        }
+        .btn:active { transform: scale(0.9); }
+        .btn-connect { background: #e94560; }
+        .btn-connect.connected { background: #00ff88; color: #000; }
+        .btn:disabled { opacity: 0.5; }
+        
+        .sliders {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        .slider-item {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .slider-label { 
+            font-size: 13px; 
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .slider-value { 
+            color: #00ff88; 
+            font-weight: bold;
+            font-size: 14px;
+            min-width: 35px;
+            text-align: right;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: linear-gradient(to right, #e94560 0%, #00ff88 100%);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .log-panel {
+            height: 80px;
+            background: #0a0a15;
+            border-top: 1px solid #0f3460;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-y: auto;
+        }
+        .log-entry { 
+            margin: 2px 0; 
+            color: #666;
+            white-space: nowrap;
+        }
+        .log-entry.new { color: #00ff88; }
+        
+        /* Portrait mode on mobile */
+        @media (max-width: 768px) {
+            .main-content { flex-direction: column; }
+            .camera-section { flex: 1; min-height: 40%; }
+            .control-panel { width: 100%; height: 60%; }
+            .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            .slider-item { margin-bottom: 0; }
+        }
+        
+        /* Landscape optimization */
+        @media (max-height: 500px) {
+            .header { padding: 8px; }
+            .header h1 { font-size: 18px; }
+            .quick-buttons { padding: 6px; }
+            .btn { padding: 8px 4px; font-size: 18px; }
+            .sliders { display: grid; grid-template-columns: repeat(4, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🦾 Роборука</h1>
+        <div class="status" id="status">
+            <span id="statusText">Отключено</span>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="camera-section">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+            <div class="no-hand" id="noHandMsg">Покажите руку в камеру 👋</div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="quick-buttons">
+                <button class="btn btn-connect" id="btnConnect" title="Подключить">📡</button>
+                <button class="btn" id="btnHome" title="Домой">🏠</button>
+                <button class="btn" id="btnGrip" title="Захват">✊</button>
+                <button class="btn" id="btnOpen" title="Открыть">🖐</button>
+            </div>
+            
+            <div class="sliders" id="sliders"></div>
+            
+            <div class="log-panel" id="logPanel"></div>
+        </div>
+    </div>
+
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // Данные
+        const joints = [
+            { id: 'thumb', icon: '👍', label: 'Большой' },
+            { id: 'index', icon: '☝️', label: 'Указательный' },
+            { id: 'middle', icon: '🖕', label: 'Средний' },
+            { id: 'ring', icon: '💍', label: 'Безымянный' },
+            { id: 'pinky', icon: '🤙', label: 'Мизинец' },
+            { id: 'wrist', icon: '💫', label: 'Запястье' },
+            { id: 'elbow', icon: '📐', label: 'Локоть' },
+            { id: 'shoulder', icon: '📍', label: 'Плечо' }
+        ];
+        
+        let positions = [90, 90, 90, 90, 90, 90, 90, 90];
+        let isConnected = false;
+        let lastSent = 0;
+        let handDetected = false;
+        
+        // Элементы
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const statusText = document.getElementById('statusText');
+        const noHandMsg = document.getElementById('noHandMsg');
+        const logPanel = document.getElementById('logPanel');
+        
+        // Логирование
+        function log(msg, isNew = true) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (isNew ? ' new' : '');
+            const time = new Date().toLocaleTimeString('ru-RU', { hour12: false });
+            entry.textContent = `[${time}] ${msg}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+            if (logPanel.children.length > 50) logPanel.removeChild(logPanel.firstChild);
+        }
+        
+        // Создание слайдеров
+        const slidersContainer = document.getElementById('sliders');
+        joints.forEach((joint, i) => {
+            const item = document.createElement('div');
+            item.className = 'slider-item';
+            item.innerHTML = `
+                <div class="slider-header">
+                    <span class="slider-label">${joint.icon} ${joint.label}</span>
+                    <span class="slider-value" id="val-${i}">90°</span>
+                </div>
+                <input type="range" min="0" max="180" value="90" 
+                       id="sl-${i}" 
+                       oninput="updatePos(${i}, this.value)">
+            `;
+            slidersContainer.appendChild(item);
+        });
+        
+        function updatePos(i, val) {
+            positions[i] = parseInt(val);
+            document.getElementById(`val-${i}`).textContent = `${val}°`;
+            throttledSend();
+        }
+        
+        // Отправка команд
+        function sendCommand(cmd) {
+            log(cmd);
+            if (isConnected) {
+                // Web Bluetooth API (требует HTTPS)
+                if (navigator.bluetooth) {
+                    // Здесь код для реального Bluetooth подключения
+                }
+                // Или WebSocket для WiFi подключения
+            }
+            log(`→ ${cmd}`, false);
+        }
+        
+        let throttleTimer = null;
+        function throttledSend() {
+            clearTimeout(throttleTimer);
+            throttleTimer = setTimeout(() => {
+                sendCommand(`SET:${positions.join(',')}`);
+            }, 100);
+        }
+        
+        // Кнопки
+        document.getElementById('btnConnect').onclick = function() {
+            isConnected = !isConnected;
+            this.classList.toggle('connected');
+            statusEl.classList.toggle('connected');
+            statusText.textContent = isConnected ? 'Подключено' : 'Отключено';
+            log(isConnected ? '✓ Подключено' : '✗ Отключено');
+            
+            // Запрос Bluetooth (если доступно)
+            if (isConnected && navigator.bluetooth) {
+                requestBluetooth();
+            }
+        };
+        
+        document.getElementById('btnHome').onclick = () => {
+            sendCommand('HOME');
+            positions = [90, 90, 90, 90, 90, 90, 90, 90];
+            updateAllSliders();
+        };
+        document.getElementById('btnGrip').onclick = () => {
+            sendCommand('GRIP');
+            positions = [45, 30, 30, 30, 30, 90, 90, 90];
+            updateAllSliders();
+        };
+        document.getElementById('btnOpen').onclick = () => {
+            sendCommand('OPEN');
+            positions = [90, 90, 90, 90, 90, 90, 90, 90];
+            updateAllSliders();
+        };
+        
+        function updateAllSliders() {
+            positions.forEach((p, i) => {
+                document.getElementById(`sl-${i}`).value = p;
+                document.getElementById(`val-${i}`).textContent = `${p}°`;
+            });
+        }
+        
+        // Bluetooth
+        async function requestBluetooth() {
+            if (!navigator.bluetooth) {
+                log('Web Bluetooth не поддерживается');
+                return;
+            }
+            
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['00001101-0000-1000-8000-00805f9b34fb'] }]
+                });
+                log(`Подключено: ${device.name}`);
+            } catch (e) {
+                log(`Bluetooth: ${e.message}`);
+                isConnected = false;
+                document.getElementById('btnConnect').classList.remove('connected');
+                statusEl.classList.remove('connected');
+                statusText.textContent = 'Отключено';
+            }
+        }
+        
+        // MediaPipe Hands
+        function onResults(results) {
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                handDetected = true;
+                noHandMsg.style.display = 'none';
+                
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // Отрисовка
+                drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00ff88', lineWidth: 2});
+                drawLandmarks(ctx, landmarks, {color: '#ff0000', radius: 4});
+                
+                // Расчёт углов
+                const angles = calculateAngles(landmarks);
+                
+                // Обновление
+                angles.forEach((angle, i) => {
+                    if (i < 8 && document.getElementById(`sl-${i}`)) {
+                        document.getElementById(`sl-${i}`).value = angle;
+                        updatePos(i, angle);
+                    }
+                });
+            } else {
+                handDetected = false;
+                noHandMsg.style.display = 'block';
+            }
+        }
+        
+        function calculateAngles(landmarks) {
+            const wrist = landmarks[0];
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const indexPip = landmarks[6];
+            const middleTip = landmarks[12];
+            const middlePip = landmarks[10];
+            const ringTip = landmarks[16];
+            const ringPip = landmarks[14];
+            const pinkyTip = landmarks[20];
+            const pinkyPip = landmarks[18];
+            
+            const dist = (a, b) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+            
+            const base = 30;
+            const maxOpen = 0.15;
+            
+            return [
+                Math.round(45 + Math.min(dist(thumbTip, wrist) / 0.2, 1) * 90),
+                Math.round(base + Math.min(dist(indexTip, indexPip) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(middleTip, middlePip) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(ringTip, ringPip) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(pinkyTip, pinkyPip) / maxOpen, 1) * (180 - base)),
+                Math.round(Math.max(0, Math.min(180, 90 + (wrist.y - 0.5) * 60))),
+                Math.round(Math.max(0, Math.min(180, 90 + (wrist.y - 0.5) * 40))),
+                Math.round(Math.max(0, Math.min(180, 90 + (wrist.x - 0.5) * 60)))
+            ];
+        }
+        
+        // Инициализация MediaPipe
+        const hands = new Hands({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }});
+        
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.5
+        });
+        
+        hands.onResults(onResults);
+        
+        // Камера
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                video.srcObject = stream;
+                log('✓ Камера запущена');
+                
+                // Обработка
+                const process = async () => {
+                    if (video.readyState >= 2) {
+                        await hands.send({image: video});
+                    }
+                    requestAnimationFrame(process);
+                };
+                process();
+                
+            } catch (err) {
+                log(`✗ Камера: ${err.message}`);
+                noHandMsg.textContent = 'Нет доступа к камере 📵';
+            }
+        }
+        
+        // PWA - установка приложения
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+        
+        // Старт
+        log('Запуск...');
+        startCamera();
+    </script>
+</body>
+</html>
