@@ -138,16 +138,21 @@ def main():
     while True:
         ret, frame = cap.read()
         if not ret:
-            break
+            print("✗ Ошибка чтения камеры")
+            continue
         
         frame = cv2.flip(frame, 1)
         h, w, _ = frame.shape
         
         # Обработка
-        if use_new_api:
+        if use_new_api and detector:
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-            result = detector.detect(mp_image)
+            try:
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+                result = detector.detect(mp_image)
+            except Exception as e:
+                print(f"⚠ Ошибка обработки: {e}")
+                continue
             
             if result.hand_landmarks:
                 for lm_list in result.hand_landmarks:
@@ -164,7 +169,7 @@ def main():
             else:
                 fc += 1
         else:
-            # Fallback без детекции - просто симуляция
+            # Fallback - классический API
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             result = detector.process(rgb)
             
