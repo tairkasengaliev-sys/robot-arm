@@ -26,6 +26,17 @@ const char* fingerNames[5] = {
 // Текущие позиции (90° = открытая ладонь)
 int positions[5] = {90, 90, 90, 90, 90};
 
+// Объявление функций (чтобы компилятор видел)
+void moveTo(int targets[5], int duration);
+void openHand();
+void grip();
+void wave();
+void testServos();
+void parseSetCommand(String data);
+void parseFingerCommand(String data);
+void processCommand(String cmd);
+void printHelp();
+
 void setup() {
   Serial.begin(9600);
   
@@ -127,7 +138,7 @@ void wave() {
 }
 
 // Установка всех позиций
-void moveTo(int targets[5], int duration = 1000) {
+void moveTo(int targets[5], int duration) {
   int steps = 20;
   int delayMs = duration / steps;
   
