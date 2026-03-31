@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#1a1a2e">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>🦾 Роборука</title>
-    <link rel="manifest" href="manifest.json">
+    <title>🦾 Роборука - 5 пальцев</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #1a1a2e;
@@ -24,40 +21,21 @@
             padding: 15px;
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            z-index: 10;
         }
         .header h1 { font-size: 22px; margin-bottom: 5px; }
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-        }
-        .btn-camera {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            cursor: pointer;
-            background: #0f3460;
-            color: #fff;
-            transition: all 0.15s;
-        }
-        .btn-camera:active { transform: scale(0.9); }
-        .status {
-            color: #ff6b6b;
-            font-size: 13px;
+        .status { 
+            color: #ff6b6b; 
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 8px;
         }
         .status.connected { color: #00ff88; }
-        .status::before {
-            content: '';
+        .status-dot {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: currentColor;
             animation: pulse 2s infinite;
@@ -86,14 +64,6 @@
             height: 100%;
             object-fit: cover;
         }
-        #canvas {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            max-width: 100%;
-            max-height: 100%;
-        }
         .no-hand {
             position: absolute;
             color: #666;
@@ -120,12 +90,11 @@
             padding: 12px 8px;
             border: none;
             border-radius: 10px;
-            font-size: 22px;
+            font-size: 20px;
             cursor: pointer;
             background: #1a1a2e;
             color: #fff;
             transition: all 0.15s;
-            touch-action: manipulation;
         }
         .btn:active { transform: scale(0.9); }
         .btn-connect { background: #e94560; }
@@ -149,19 +118,8 @@
             align-items: center;
             margin-bottom: 6px;
         }
-        .slider-label { 
-            font-size: 13px; 
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .slider-value { 
-            color: #00ff88; 
-            font-weight: bold;
-            font-size: 14px;
-            min-width: 35px;
-            text-align: right;
-        }
+        .slider-label { font-size: 13px; display: flex; align-items: center; gap: 5px; }
+        .slider-value { color: #00ff88; font-weight: bold; font-size: 14px; min-width: 35px; text-align: right; }
         input[type="range"] {
             width: 100%;
             height: 6px;
@@ -189,39 +147,22 @@
             font-size: 11px;
             overflow-y: auto;
         }
-        .log-entry { 
-            margin: 2px 0; 
-            color: #666;
-            white-space: nowrap;
-        }
+        .log-entry { margin: 2px 0; color: #666; }
         .log-entry.new { color: #00ff88; }
         
-        /* Portrait mode on mobile */
         @media (max-width: 768px) {
             .main-content { flex-direction: column; }
             .camera-section { flex: 1; min-height: 40%; }
             .control-panel { width: 100%; height: 60%; }
             .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-            .slider-item { margin-bottom: 0; }
-        }
-        
-        /* Landscape optimization */
-        @media (max-height: 500px) {
-            .header { padding: 8px; }
-            .header h1 { font-size: 18px; }
-            .quick-buttons { padding: 6px; }
-            .btn { padding: 8px 4px; font-size: 18px; }
-            .sliders { display: grid; grid-template-columns: repeat(4, 1fr); }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="header-top">
-            <h1>🦾 Роборука</h1>
-            <button class="btn-camera" id="btnCamera" title="Сменить камеру">📷</button>
-        </div>
+        <h1>🦾 Роборука - 5 пальцев</h1>
         <div class="status" id="status">
+            <span class="status-dot"></span>
             <span id="statusText">Отключено</span>
         </div>
     </div>
@@ -229,13 +170,12 @@
     <div class="main-content">
         <div class="camera-section">
             <video id="video" autoplay playsinline muted></video>
-            <canvas id="canvas"></canvas>
-            <div class="no-hand" id="noHandMsg">Покажите руку в камеру 👋</div>
+            <div class="no-hand" id="noHandMsg">Покажи руку в камеру 👋<br><small>Нужен HTTPS или localhost</small></div>
         </div>
         
         <div class="control-panel">
             <div class="quick-buttons">
-                <button class="btn btn-connect" id="btnConnect" title="Подключить">📡</button>
+                <button class="btn btn-connect" id="btnConnect" title="Bluetooth">📡</button>
                 <button class="btn" id="btnHome" title="Домой">🏠</button>
                 <button class="btn" id="btnGrip" title="Захват">✊</button>
                 <button class="btn" id="btnOpen" title="Открыть">🖐</button>
@@ -259,24 +199,20 @@
             { id: 'index', icon: '☝️', label: 'Указательный' },
             { id: 'middle', icon: '🖕', label: 'Средний' },
             { id: 'ring', icon: '💍', label: 'Безымянный' },
-            { id: 'pinky', icon: '🤙', label: 'Мизинец' },
-            { id: 'wrist', icon: '💫', label: 'Запястье' },
-            { id: 'elbow', icon: '📐', label: 'Локоть' },
-            { id: 'shoulder', icon: '📍', label: 'Плечо' }
+            { id: 'pinky', icon: '🤙', label: 'Мизинец' }
         ];
         
-        let positions = [90, 90, 90, 90, 90, 90, 90, 90];
+        let positions = [90, 90, 90, 90, 90];
+        let bluetoothDevice = null;
+        let txCharacteristic = null;
         let isConnected = false;
         let lastSent = 0;
-        let handDetected = false;
         
         // Элементы
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const noHandMsg = document.getElementById('noHandMsg');
         const statusEl = document.getElementById('status');
         const statusText = document.getElementById('statusText');
-        const noHandMsg = document.getElementById('noHandMsg');
         const logPanel = document.getElementById('logPanel');
         
         // Логирование
@@ -313,17 +249,22 @@
             throttledSend();
         }
         
-        // Отправка команд
-        function sendCommand(cmd) {
+        // Отправка команд через Bluetooth
+        async function sendCommand(cmd) {
             log(cmd);
-            if (isConnected) {
-                // Web Bluetooth API (требует HTTPS)
-                if (navigator.bluetooth) {
-                    // Здесь код для реального Bluetooth подключения
+            
+            if (isConnected && txCharacteristic) {
+                try {
+                    const encoder = new TextEncoder();
+                    await txCharacteristic.writeValue(encoder.encode(cmd + '\n'));
+                    log(`→ Отправлено`, false);
+                } catch (e) {
+                    log(`✗ Ошибка: ${e.message}`);
+                    disconnectBluetooth();
                 }
-                // Или WebSocket для WiFi подключения
+            } else {
+                log(`[SIM] ${cmd}`);
             }
-            log(`→ ${cmd}`, false);
         }
         
         let throttleTimer = null;
@@ -334,33 +275,74 @@
             }, 100);
         }
         
-        // Кнопки
-        document.getElementById('btnConnect').onclick = function() {
-            isConnected = !isConnected;
-            this.classList.toggle('connected');
-            statusEl.classList.toggle('connected');
-            statusText.textContent = isConnected ? 'Подключено' : 'Отключено';
-            log(isConnected ? '✓ Подключено' : '✗ Отключено');
-            
-            // Запрос Bluetooth (если доступно)
-            if (isConnected && navigator.bluetooth) {
-                requestBluetooth();
+        // Bluetooth
+        async function connectBluetooth() {
+            if (!navigator.bluetooth) {
+                log('❌ Web Bluetooth не поддерживается');
+                log('Используй Chrome и HTTPS');
+                return;
             }
-        };
+            
+            try {
+                log('🔍 Поиск HC-05...');
+                
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'HC' }],
+                    optionalServices: ['00001101-0000-1000-8000-00805f9b34fb']
+                });
+                
+                bluetoothDevice.addEventListener('gattserverdisconnected', disconnectBluetooth);
+                
+                log(`📡 Подключение к ${bluetoothDevice.name}...`);
+                const server = await bluetoothDevice.gatt.connect();
+                
+                // Serial Port Profile
+                const service = await server.getPrimaryService('00001101-0000-1000-8000-00805f9b34fb');
+                txCharacteristic = await service.getCharacteristic('00001102-0000-1000-8000-00805f9b34fb');
+                
+                isConnected = true;
+                statusEl.classList.add('connected');
+                statusText.textContent = 'Подключено';
+                document.getElementById('btnConnect').classList.add('connected');
+                log('✓ Подключено!');
+                
+            } catch (e) {
+                log(`✗ Ошибка: ${e.message}`);
+                disconnectBluetooth();
+            }
+        }
+        
+        function disconnectBluetooth() {
+            isConnected = false;
+            txCharacteristic = null;
+            if (bluetoothDevice) {
+                bluetoothDevice.gatt.disconnect();
+                bluetoothDevice = null;
+            }
+            statusEl.classList.remove('connected');
+            statusText.textContent = 'Отключено';
+            document.getElementById('btnConnect').classList.remove('connected');
+            log('✗ Отключено');
+        }
+        
+        // Кнопки
+        document.getElementById('btnConnect').onclick = connectBluetooth;
         
         document.getElementById('btnHome').onclick = () => {
             sendCommand('HOME');
-            positions = [90, 90, 90, 90, 90, 90, 90, 90];
+            positions = [90, 90, 90, 90, 90];
             updateAllSliders();
         };
+        
         document.getElementById('btnGrip').onclick = () => {
             sendCommand('GRIP');
-            positions = [45, 30, 30, 30, 30, 90, 90, 90];
+            positions = [45, 20, 20, 20, 20];
             updateAllSliders();
         };
+        
         document.getElementById('btnOpen').onclick = () => {
             sendCommand('OPEN');
-            positions = [90, 90, 90, 90, 90, 90, 90, 90];
+            positions = [90, 90, 90, 90, 90];
             updateAllSliders();
         };
         
@@ -371,56 +353,24 @@
             });
         }
         
-        // Bluetooth
-        async function requestBluetooth() {
-            if (!navigator.bluetooth) {
-                log('Web Bluetooth не поддерживается');
-                return;
-            }
-            
-            try {
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: ['00001101-0000-1000-8000-00805f9b34fb'] }]
-                });
-                log(`Подключено: ${device.name}`);
-            } catch (e) {
-                log(`Bluetooth: ${e.message}`);
-                isConnected = false;
-                document.getElementById('btnConnect').classList.remove('connected');
-                statusEl.classList.remove('connected');
-                statusText.textContent = 'Отключено';
-            }
-        }
-        
         // MediaPipe Hands
         function onResults(results) {
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                handDetected = true;
                 noHandMsg.style.display = 'none';
                 
                 const landmarks = results.multiHandLandmarks[0];
-                
-                // Отрисовка
-                drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#00ff88', lineWidth: 2});
-                drawLandmarks(ctx, landmarks, {color: '#ff0000', radius: 4});
                 
                 // Расчёт углов
                 const angles = calculateAngles(landmarks);
                 
                 // Обновление
                 angles.forEach((angle, i) => {
-                    if (i < 8 && document.getElementById(`sl-${i}`)) {
+                    if (i < 5) {
                         document.getElementById(`sl-${i}`).value = angle;
                         updatePos(i, angle);
                     }
                 });
             } else {
-                handDetected = false;
                 noHandMsg.style.display = 'block';
             }
         }
@@ -439,18 +389,15 @@
             
             const dist = (a, b) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
             
-            const base = 30;
-            const maxOpen = 0.15;
+            const base = 40;
+            const maxOpen = 0.12;
             
             return [
-                Math.round(45 + Math.min(dist(thumbTip, wrist) / 0.2, 1) * 90),
+                Math.round(45 + Math.min(dist(thumbTip, wrist) / 0.15, 1) * 90),
                 Math.round(base + Math.min(dist(indexTip, indexPip) / maxOpen, 1) * (180 - base)),
                 Math.round(base + Math.min(dist(middleTip, middlePip) / maxOpen, 1) * (180 - base)),
                 Math.round(base + Math.min(dist(ringTip, ringPip) / maxOpen, 1) * (180 - base)),
-                Math.round(base + Math.min(dist(pinkyTip, pinkyPip) / maxOpen, 1) * (180 - base)),
-                Math.round(Math.max(0, Math.min(180, 90 + (wrist.y - 0.5) * 60))),
-                Math.round(Math.max(0, Math.min(180, 90 + (wrist.y - 0.5) * 40))),
-                Math.round(Math.max(0, Math.min(180, 90 + (wrist.x - 0.5) * 60)))
+                Math.round(base + Math.min(dist(pinkyTip, pinkyPip) / maxOpen, 1) * (180 - base))
             ];
         }
         
@@ -467,30 +414,16 @@
         });
         
         hands.onResults(onResults);
-
+        
         // Камера
-        let currentCamera = 'user'; // 'user' или 'environment'
-        let currentStream = null;
-
         async function startCamera() {
-            // Остановить предыдущую камеру
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: currentCamera,
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    }
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
                 });
                 video.srcObject = stream;
-                currentStream = stream;
-                log(`✓ Камера запущена (${currentCamera === 'user' ? 'фронтальная' : 'задняя'})`);
-
-                // Обработка
+                log('✓ Камера запущена');
+                
                 const process = async () => {
                     if (video.readyState >= 2) {
                         await hands.send({image: video});
@@ -498,25 +431,13 @@
                     requestAnimationFrame(process);
                 };
                 process();
-
+                
             } catch (err) {
                 log(`✗ Камера: ${err.message}`);
                 noHandMsg.textContent = 'Нет доступа к камере 📵';
             }
         }
-
-        // Переключение камеры
-        document.getElementById('btnCamera').onclick = function() {
-            currentCamera = currentCamera === 'user' ? 'environment' : 'user';
-            log(`Переключение на ${currentCamera === 'user' ? 'фронтальную' : 'заднюю'}...`);
-            startCamera();
-        };
-
-        // PWA - установка приложения
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
-
+        
         // Старт
         log('Запуск...');
         startCamera();
