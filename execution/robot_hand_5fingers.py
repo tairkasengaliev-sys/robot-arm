@@ -6,18 +6,17 @@ Arduino Uno + 5 сервоприводов SG90
 
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import vision
+from mediapipe import solutions
 import numpy as np
 import serial
 import time
 from pathlib import Path
+import os
 
 # Настройки
 ARDUINO_PORT = "/dev/ttyUSB0"
 BAUD_RATE = 9600
-
-# MediaPipe
-mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
 
 
 class RobotHandController:
@@ -122,6 +121,7 @@ class RobotHandController:
 def calculate_finger_angles(landmarks):
     """
     Расчёт углов 5 пальцев из позиции руки.
+    landmarks: список из 21 точки
     """
     if len(landmarks) < 21:
         return [90, 90, 90, 90, 90]
@@ -242,6 +242,26 @@ def main():
     # Контроллер
     controller = RobotHandController()
     
+    # Инициализация MediaPipe Hands
+    print("Загрузка модели MediaPipe...")
+    
+    base_options = vision.BaseOptions(model_asset_path='hand_landmarker.task')
+    options = vision.HandLandmarkerOptions(
+        base_options=base_options,
+        running_mode=vision.RunningMode.LIVE_STREAM,
+        num_hands=1,
+        min_hand_detection_confidence=0.7,
+        min_tracking_confidence=0.5
+    )
+    
+    try:
+        detector = vision.HandLandmarker.create_from_options(options)
+        print("✓ Модель загружена")
+    except Exception as e:
+        print(f"✗ Ошибка загрузки модели: {e}")
+        print("  Скачайте: hand_landmarker.task")
+        return
+    
     # Камера
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -250,13 +270,6 @@ def main():
     if not cap.isOpened():
         print("✗ Не удалось открыть камеру")
         return
-    
-    hands = mp_hands.Hands(
-        static_image_mode=False,
-        max_num_hands=1,
-        min_detection_confidence=0.7,
-        min_tracking_confidence=0.5
-    )
     
     last_positions = None
     frame_count = 0
@@ -277,22 +290,23 @@ def main():
         frame = cv2.flip(frame, 1)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Обработка руки
-        results = hands.process(frame_rgb)
+        # Обработка MediaPipe
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+        detection_result = detector.detect(mp_image)
         
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
+        if detection_result.hand_landmarks:
+            for hand_landmarks in detection_result.hand_landmarks:
                 # Отрисовка
-                mp_drawing.draw_landmarks(
-                    frame, 
-                    hand_landmarks, 
-                    mp_hands.HAND_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=3),
-                    mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2)
+                solutions.drawing_utils.draw_landmarks(
+                    frame,
+                    hand_landmarks,
+                    solutions.hands.HAND_CONNECTIONS,
+                    solutions.drawing_utils.DrawingSpec(color=(0, 255, 0), thickness=3),
+                    solutions.drawing_utils.DrawingSpec(color=(0, 0, 255), thickness=2)
                 )
                 
                 # Расчёт углов
-                angles = calculate_finger_angles(hand_landmarks.landmark)
+                angles = calculate_finger_angles(hand_landmarks)
                 
                 # Отправка (каждые 3 кадра)
                 frame_count += 1
