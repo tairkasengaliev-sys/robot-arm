@@ -1,6 +1,6 @@
 """
-Управление роборукой через камеру
-Использует MediaPipe для трекинга руки и отправляет команды на Arduino
+Роборука - Управление через камеру
+Arduino Uno R3 + Sensor Shield V5.0 + HC-05
 """
 
 import cv2
@@ -14,191 +14,285 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Настройки
-PROJECT_ROOT = Path(__file__).parent
-ARDUINO_PORT = "/dev/ttyUSB0"  # или COM3 для Windows
+PROJECT_ROOT = Path(__file__).parent.parent
+ARDUINO_PORT = "/dev/ttyUSB0"  # Linux: /dev/ttyUSB0, Windows: COM3
 BAUD_RATE = 9600
 
-# Инициализация MediaPipe
+# MediaPipe
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
-# Границы углов сервоприводов
-MIN_ANGLE = 0
-MAX_ANGLE = 180
-
 
 class RobotArmController:
+    """Контроллер роборуки на Arduino Uno + Shield V5.0"""
+    
     def __init__(self, port=ARDUINO_PORT, baud=BAUD_RATE):
         self.arduino = None
         self.port = port
         self.baud = baud
         self.connected = False
         
-        # Текущие позиции
-        self.positions = {
-            'thumb': 90,
-            'index': 90,
-            'middle': 90,
-            'ring': 90,
-            'pinky': 90,
-            'wrist': 90,
-            'elbow': 90,
-            'shoulder': 90
-        }
+        # Позиции сервоприводов (8 каналов)
+        # Shield V5.0: D3, D5, D6, D9, D10, D11, A0, A1
+        self.positions = [90] * 8
+        self.names = [
+            'Thumb',      # D3  - Большой
+            'Index',      # D5  - Указательный
+            'Middle',     # D6  - Средний
+            'Ring',       # D9  - Безымянный
+            'Pinky',      # D10 - Мизинец
+            'Wrist',      # D11 - Запястье
+            'Elbow',      # A0  - Локоть
+            'Shoulder'    # A1  - Плечо
+        ]
         
-    def connect(self):
-        """Подключение к Arduino."""
-        try:
-            self.arduino = serial.Serial(self.port, self.baud, timeout=1)
-            time.sleep(2)  # Ждём инициализацию
-            self.connected = True
-            print(f"✓ Подключено к {self.port}")
-            return True
-        except Exception as e:
-            print(f"✗ Ошибка подключения: {e}")
-            print("  Запуск в режиме симуляции...")
-            return False
+    def connect(self, port=None):
+        """Подключение к Arduino через USB или Bluetooth."""
+        ports_to_try = [
+            port,
+            "/dev/ttyUSB0",      # Linux USB
+            "/dev/ttyUSB1",
+            "/dev/ttyACM0",      # Arduino Uno
+            "/dev/rfcomm0",      # Bluetooth Linux
+            "COM3",              # Windows
+            "COM4",
+            "COM5"
+        ]
+        
+        for p in ports_to_try:
+            if p is None:
+                continue
+            try:
+                self.arduino = serial.Serial(p, self.baud, timeout=1)
+                time.sleep(2)  # Ждём инициализацию Arduino
+                self.connected = True
+                self.port = p
+                print(f"✓ Подключено к {p}")
+                return True
+            except Exception as e:
+                print(f"✗ {p}: {e}")
+                continue
+        
+        print("⚠ Не удалось подключиться. Режим симуляции.")
+        return False
     
     def disconnect(self):
         """Отключение от Arduino."""
-        if self.arduino and self.connected:
+        if self.arduino and self.arduino.is_open:
             self.arduino.close()
-            self.connected = False
+        self.connected = False
     
-    def send_command(self, command):
+    def send_command(self, cmd):
         """Отправка команды на Arduino."""
-        if self.connected and self.arduino:
-            self.arduino.write(f"{command}\n".encode())
-            response = self.arduino.readline().decode().strip()
-            return response
+        if self.connected and self.arduino and self.arduino.is_open:
+            try:
+                self.arduino.write(f"{cmd}\n".encode())
+                self.arduino.flush()
+                response = self.arduino.readline().decode().strip()
+                return response
+            except Exception as e:
+                print(f"Ошибка отправки: {e}")
+                return f"ERR: {e}"
         else:
-            print(f"[SIM] Команда: {command}")
+            print(f"[SIM] {cmd}")
             return "SIM_OK"
     
-    def set_positions(self, thumb, index, middle, ring, pinky, wrist, elbow, shoulder):
-        """Установка позиций всех сервоприводов."""
-        # Ограничение углов
-        angles = [
-            max(MIN_ANGLE, min(MAX_ANGLE, thumb)),
-            max(MIN_ANGLE, min(MAX_ANGLE, index)),
-            max(MIN_ANGLE, min(MAX_ANGLE, middle)),
-            max(MIN_ANGLE, min(MAX_ANGLE, ring)),
-            max(MIN_ANGLE, min(MAX_ANGLE, pinky)),
-            max(MIN_ANGLE, min(MAX_ANGLE, wrist)),
-            max(MIN_ANGLE, min(MAX_ANGLE, elbow)),
-            max(MIN_ANGLE, min(MAX_ANGLE, shoulder))
-        ]
+    def set_positions(self, positions):
+        """Установка позиций всех 8 сервоприводов."""
+        angles = [max(0, min(180, int(p))) for p in positions[:8]]
+        cmd = f"SET:{','.join(map(str, angles))}"
+        result = self.send_command(cmd)
         
-        command = f"SET:{','.join(map(str, angles))}"
-        response = self.send_command(command)
+        if result in ["OK", "SET_OK", "SIM_OK"]:
+            self.positions = angles
         
-        if response in ["OK", "SIM_OK"]:
-            self.positions = {
-                'thumb': angles[0],
-                'index': angles[1],
-                'middle': angles[2],
-                'ring': angles[3],
-                'pinky': angles[4],
-                'wrist': angles[5],
-                'elbow': angles[6],
-                'shoulder': angles[7]
-            }
-        
-        return response
+        return result
+    
+    def set_servo(self, channel, angle):
+        """Установка одного сервопривода."""
+        if 0 <= channel < 8:
+            angle = max(0, min(180, int(angle)))
+            self.positions[channel] = angle
+            return self.set_positions(self.positions)
+        return "ERR: Invalid channel"
     
     def home(self):
-        """Домашняя позиция."""
+        """Домашняя позиция (все в 90°)."""
         return self.send_command("HOME")
     
     def grip(self):
-        """Захват."""
-        return self.send_command("GRIP")
+        """Захват (сжать пальцы)."""
+        grip_positions = [45, 30, 30, 30, 30, 90, 120, 90]
+        return self.set_positions(grip_positions)
     
     def open_hand(self):
         """Открыть ладонь."""
         return self.send_command("OPEN")
     
     def get_status(self):
-        """Получить текущий статус."""
+        """Получить текущие позиции."""
         return self.send_command("STATUS")
-
-
-def calculate_angles_from_hand(landmarks, frame_height):
-    """
-    Расчёт углов сервоприводов на основе позиции руки.
     
-    landmarks: координаты关键点 руки от MediaPipe
+    def test_servos(self):
+        """Тест сервоприводов."""
+        return self.send_command("TEST")
+
+
+def calculate_angles(landmarks, frame_h):
     """
-    # Извлечение关键点
+    Расчёт углов сервоприводов из позиции руки.
+    
+    landmarks: 21 точка руки от MediaPipe
+    """
+    if len(landmarks) < 21:
+        return [90] * 8
+    
+    # Ключевые точки
+    wrist = landmarks[0]
     thumb_tip = landmarks[4]
     index_tip = landmarks[8]
-    middle_tip = landmarks[12]
-    ring_tip = landmarks[16]
-    pinky_tip = landmarks[20]
-    
-    wrist = landmarks[0]
     index_pip = landmarks[6]
+    middle_tip = landmarks[12]
     middle_pip = landmarks[10]
+    ring_tip = landmarks[16]
     ring_pip = landmarks[14]
+    pinky_tip = landmarks[20]
     pinky_pip = landmarks[18]
     
-    # Пальцы - расстояние от кончика до основания
-    def finger_openness(tip, pip):
-        return np.sqrt((tip.x - pip.x)**2 + (tip.y - pip.y)**2)
+    # Расстояние между точками
+    def dist(a, b):
+        return np.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
     
-    index_open = finger_openness(index_tip, index_pip)
-    middle_open = finger_openness(middle_tip, middle_pip)
-    ring_open = finger_openness(ring_tip, ring_pip)
-    pinky_open = finger_openness(pinky_tip, pinky_pip)
+    # Открытость пальцев (0 = сжат, 1 = разжат)
+    def finger_openness(tip, pip, max_open=0.15):
+        d = dist(tip, pip)
+        return min(d / max_open, 1.0)
     
-    # Преобразование в углы (0 = закрыт, 180 = открыт)
+    # Базовый угол для сжатого пальца
     base_angle = 30
-    max_open = 0.15
     
-    index_angle = base_angle + min(index_open / max_open, 1) * (180 - base_angle)
-    middle_angle = base_angle + min(middle_open / max_open, 1) * (180 - base_angle)
-    ring_angle = base_angle + min(ring_open / max_open, 1) * (180 - base_angle)
-    pinky_angle = base_angle + min(pinky_open / max_open, 1) * (180 - base_angle)
+    # Пальцы
+    index_angle = base_angle + finger_openness(index_tip, index_pip) * (180 - base_angle)
+    middle_angle = base_angle + finger_openness(middle_tip, middle_pip) * (180 - base_angle)
+    ring_angle = base_angle + finger_openness(ring_tip, ring_pip) * (180 - base_angle)
+    pinky_angle = base_angle + finger_openness(pinky_tip, pinky_pip) * (180 - base_angle)
     
-    # Большой палец - угол от запястья
-    thumb_open = np.sqrt((thumb_tip.x - wrist.x)**2 + (thumb_tip.y - wrist.y)**2)
-    thumb_angle = 45 + min(thumb_open / 0.2, 1) * 90
+    # Большой палец (от запястья)
+    thumb_open = dist(thumb_tip, wrist)
+    thumb_angle = 45 + min(thumb_open / 0.2, 1.0) * 90
     
-    # Запястье - угол наклона
+    # Запястье (наклон руки)
     wrist_angle = 90 + (wrist.y - 0.5) * 60
     
-    # Локоть - высота руки в кадре
+    # Локоть (высота руки)
     elbow_angle = 90 + (wrist.y - 0.5) * 40
     
-    # Плечо - позиция X руки
+    # Плечо (позиция X руки)
     shoulder_angle = 90 + (wrist.x - 0.5) * 60
     
-    return {
-        'thumb': int(thumb_angle),
-        'index': int(index_angle),
-        'middle': int(middle_angle),
-        'ring': int(ring_angle),
-        'pinky': int(pinky_angle),
-        'wrist': int(wrist_angle),
-        'elbow': int(elbow_angle),
-        'shoulder': int(shoulder_angle)
-    }
+    # Ограничение 0-180
+    return [
+        int(np.clip(thumb_angle, 0, 180)),
+        int(np.clip(index_angle, 0, 180)),
+        int(np.clip(middle_angle, 0, 180)),
+        int(np.clip(ring_angle, 0, 180)),
+        int(np.clip(pinky_angle, 0, 180)),
+        int(np.clip(wrist_angle, 0, 180)),
+        int(np.clip(elbow_angle, 0, 180)),
+        int(np.clip(shoulder_angle, 0, 180))
+    ]
+
+
+def draw_ui(frame, positions, names, fps=0, connected=False):
+    """Отрисовка интерфейса на кадре."""
+    h, w = frame.shape[:2]
+    
+    # Панель UI
+    ui_w = 280
+    ui_h = 30 + len(names) * 32 + 50
+    
+    # Фон
+    cv2.rectangle(frame, (w - ui_w - 10, 10), (w - 10, 10 + ui_h), (0, 0, 0), -1)
+    cv2.rectangle(frame, (w - ui_w - 10, 10), (w - 10, 10 + ui_h), (0, 255, 0), 2)
+    
+    # Заголовок
+    cv2.putText(frame, "ROBOT ARM", (w - ui_w, 32), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    
+    # Статус
+    status = "CONNECTED" if connected else "OFFLINE"
+    color = (0, 255, 0) if connected else (0, 0, 255)
+    cv2.putText(frame, status, (w - 120, 32), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    
+    # FPS
+    cv2.putText(frame, f"FPS: {fps:.0f}", (w - 60, 32), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+    
+    # Позиции сервоприводов
+    icons = ['👍', '☝️', '🖕', '💍', '🤙', '💫', '📐', '📍']
+    
+    for i, (pos, name) in enumerate(zip(positions, names)):
+        y = 52 + i * 32
+        color = (0, 255, 0) if pos > 100 else (0, 255, 255)
+        
+        # Прогресс бар
+        bar_w = int((pos / 180) * (ui_w - 80))
+        cv2.rectangle(frame, (w - ui_w, y - 5), (w - 30, y + 16), (30, 30, 30), -1)
+        cv2.rectangle(frame, (w - ui_w, y - 5), (w - ui_w + bar_w, y + 16), color, -1)
+        
+        # Текст
+        cv2.putText(frame, f"{icons[i]} {name[:8]}", (w - ui_w + 5, y + 12), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+        cv2.putText(frame, f"{pos}°", (w - 55, y + 12), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
+    
+    # Подсказки
+    hints = [
+        "Q - Выход",
+        "H - Домой", 
+        "G - Захват",
+        "O - Открыть",
+        "C - Подключить",
+        "T - Тест"
+    ]
+    
+    for i, hint in enumerate(hints):
+        cv2.putText(frame, hint, (10, h - 15 - i * 22), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+    
+    return frame
 
 
 def main():
-    """Основной цикл."""
+    """Основной цикл программы."""
     print("=" * 50)
-    print("🤖 Управление роборукой через камеру")
+    print("🦾 Роборука - Arduino Uno + Shield V5.0")
     print("=" * 50)
+    print()
+    print("Подключение сервоприводов:")
+    print("  D3  → Большой палец")
+    print("  D5  → Указательный")
+    print("  D6  → Средний")
+    print("  D9  → Безымянный")
+    print("  D10 → Мизинец")
+    print("  D11 → Запястье")
+    print("  A0  → Локоть")
+    print("  A1  → Плечо")
+    print()
     
-    # Подключение к Arduino
+    # Контроллер
     controller = RobotArmController()
-    controller.connect()
     
-    # Открытие камеры
+    # Камера
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    
+    if not cap.isOpened():
+        print("✗ Не удалось открыть камеру")
+        print("Попробуйте: cv2.VideoCapture(1) для фронтальной")
+        return
     
     hands = mp_hands.Hands(
         static_image_mode=False,
@@ -209,73 +303,88 @@ def main():
     
     last_positions = None
     frame_count = 0
+    last_time = time.time()
+    fps = 0
     
-    print("\n📹 Камера запущена. Покажите руку в камеру.")
-    print("Нажмите 'q' для выхода, 'h' - домашняя позиция, 'g' - захват")
+    print("\n📹 Камера запущена")
+    print("Покажите руку в камеру")
+    print("Нажмите 'c' для подключения к Arduino")
+    print("Нажмите 'q' для выхода")
+    print()
     
-    while cap.isOpened():
+    while True:
         ret, frame = cap.read()
         if not ret:
             break
         
         frame = cv2.flip(frame, 1)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Обработка руки
         results = hands.process(frame_rgb)
         
-        # Отрисовка
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                
-                # Расчёт углов
-                angles = calculate_angles_from_hand(
-                    hand_landmarks.landmark, 
-                    frame.shape[0]
+                # Отрисовка скелета руки
+                mp_drawing.draw_landmarks(
+                    frame, 
+                    hand_landmarks, 
+                    mp_hands.HAND_CONNECTIONS,
+                    mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=3),
+                    mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2)
                 )
                 
-                # Отправка на Arduino (каждые 5 кадров для плавности)
-                frame_count += 1
-                if frame_count % 5 == 0:
-                    if angles != last_positions:
-                        controller.set_positions(**angles)
-                        last_positions = angles.copy()
+                # Расчёт углов
+                angles = calculate_angles(hand_landmarks.landmark, frame.shape[0])
                 
-                # Отображение углов на экране
-                y_offset = 30
-                for joint, angle in angles.items():
-                    cv2.putText(frame, f"{joint}: {angle}°", (10, y_offset),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    y_offset += 25
+                # Отправка на Arduino (каждые 3 кадра)
+                frame_count += 1
+                if frame_count % 3 == 0 and angles != last_positions:
+                    controller.set_positions(angles)
+                    last_positions = angles.copy()
         else:
-            cv2.putText(frame, "Рука не обнаружена", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            frame_count += 1
         
-        # Статус подключения
-        status = "CONNECTED" if controller.connected else "SIMULATION"
-        color = (0, 255, 0) if controller.connected else (0, 128, 255)
-        cv2.putText(frame, status, (frame.shape[1] - 120, 30),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        # FPS
+        if frame_count % 30 == 0:
+            fps = 30 / max(0.001, time.time() - last_time)
+            last_time = time.time()
         
-        cv2.imshow("Robot Arm Control", frame)
+        # UI
+        frame = draw_ui(frame, controller.positions, controller.names, fps, controller.connected)
         
-        # Обработка клавиш
+        cv2.imshow("Robot Arm - Uno Shield V5.0", frame)
+        
+        # Клавиши
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
         elif key == ord('h'):
             controller.home()
-            print("→ Домашняя позиция")
+            print("→ Домой")
         elif key == ord('g'):
             controller.grip()
             print("→ Захват")
         elif key == ord('o'):
             controller.open_hand()
-            print("→ Открыть ладонь")
+            print("→ Открыть")
+        elif key == ord('c'):
+            if controller.connect():
+                print("✓ Подключено")
+            else:
+                print("✗ Не подключено")
+        elif key == ord('t'):
+            controller.test_servos()
+            print("→ Тест серво")
+        elif key == ord('s'):
+            status = controller.get_status()
+            print(f"→ Статус: {status}")
     
     # Очистка
     cap.release()
     cv2.destroyAllWindows()
     controller.disconnect()
+    
     print("\n✓ Завершено")
 
 
