@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖐️ Роборука - Управление</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 20px; font-size: 28px; }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        
+        .video-section {
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .status-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-dot.connected { background: #00ff88; animation: pulse 2s infinite; }
+        .status-dot.disconnected { background: #ff4757; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .control-section {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 20px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-connect { background: #e94560; color: #fff; }
+        .btn-connect.connected { background: #00ff88; color: #000; }
+        .btn-action { background: #0f3460; color: #fff; }
+        
+        .sliders { margin-top: 20px; }
+        .slider-item { margin-bottom: 15px; }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .slider-value { color: #00ff88; font-weight: bold; }
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #0f3460;
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #00ff88;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .log {
+            margin-top: 20px;
+            background: #0a0a15;
+            border-radius: 10px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry { margin: 3px 0; color: #666; }
+        .log-entry.new { color: #00ff88; }
+        
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🖐️ Роборука - 5 пальцев</h1>
+    
+    <div class="container">
+        <div class="video-section">
+            <img id="video" src="/video" alt="Камера">
+            <div class="status-overlay">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Отключено</span>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <button class="btn btn-connect" id="btnConnect">📡 Подключить</button>
+            <button class="btn btn-action" onclick="sendCommand('OPEN')">🖐 Открыть</button>
+            <button class="btn btn-action" onclick="sendCommand('GRIP')">✊ Захват</button>
+            <button class="btn btn-action" onclick="sendCommand('HOME')">🏠 Домой</button>
+            
+            <div class="sliders" id="sliders"></div>
+            
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+    
+    <script>
+        // ===== RELAY WebSocket =====
+        const RELAY_URL = "wss://твой-relay.railway.app";  // ЗАМЕНИТЬ ПОСЛЕ ДЕПЛОЯ!
+        
+        let ws = null;
+        let wsReady = false;
+        
+        function connectRelay() {
+            ws = new WebSocket(RELAY_URL);
+            
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'register', role: 'web' }));
+                wsReady = true;
+                log('✅ Relay подключён');
+            };
+            
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'arduino_status') {
+                    const on = data.connected;
+                    const dot = document.getElementById('statusDot');
+                    const text = document.getElementById('statusText');
+                    
+                    if (on) {
+                        dot.className = 'status-dot connected';
+                        text.textContent = 'Ноутбук онлайн ✅';
+                        log('🤖 Arduino подключено!');
+                    } else {
+                        dot.className = 'status-dot disconnected';
+                        text.textContent = 'Ноутбук офлайн ❌';
+                        log('❌ Arduino отключилось');
+                    }
+                }
+            };
+            
+            ws.onclose = () => {
+                wsReady = false;
+                log('🔄 Переподключение...');
+                setTimeout(connectRelay, 3000);
+            };
+            
+            ws.onerror = () => log('⚠️ Ошибка relay');
+        }
+        
+        connectRelay();
+        
+        function sendCommand(cmd) {
+            if (!wsReady) { log('⚠️ Нет соединения с relay'); return; }
+            ws.send(JSON.stringify({ type: 'command', command: cmd }));
+            log(`→ ${cmd}`);
+        }
+        
+        function sendPositions(positions) {
+            if (!wsReady) return;
+            ws.send(JSON.stringify({ type: 'set', positions }));
+        }
+        
+        // ===== Интерфейс =====
+        const fingers = ['👍 Большой', '☝️ Указательный', '🖕 Средний', '💍 Безымянный', '🤙 Мизинец'];
+        let positions = [90, 90, 90, 90, 90];
+        
+        const slidersDiv = document.getElementById('sliders');
+        fingers.forEach((finger, i) => {
+            const item = document.createElement('div');
+            item.className = 'slider-item';
+            item.innerHTML = `
+                <div class="slider-label">
+                    <span>${finger}</span>
+                    <span class="slider-value" id="val-${i}">90°</span>
+                </div>
+                <input type="range" min="0" max="180" value="90" 
+                       id="sl-${i}" oninput="updatePos(${i}, this.value)">
+            `;
+            slidersDiv.appendChild(item);
+        });
+        
+        function log(msg, isNew = true) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (isNew ? ' new' : '');
+            const time = new Date().toLocaleTimeString('ru-RU');
+            entry.textContent = `[${time}] ${msg}`;
+            document.getElementById('log').appendChild(entry);
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        }
+        
+        function updatePos(i, val) {
+            positions[i] = parseInt(val);
+            document.getElementById(`val-${i}`).textContent = `${val}°`;
+            throttledSend();
+        }
+        
+        let throttleTimer = null;
+        function throttledSend() {
+            clearTimeout(throttleTimer);
+            throttleTimer = setTimeout(() => {
+                sendPositions(positions);
+            }, 100);
+        }
+        
+        log('Запуск...');
+    </script>
+</body>
+</html>
