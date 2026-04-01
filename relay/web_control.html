@@ -31,6 +31,7 @@
             border-radius: 15px;
             overflow: hidden;
             position: relative;
+            min-height: 480px;
         }
         #video {
             width: 100%;
@@ -45,6 +46,7 @@
             padding: 8px 15px;
             border-radius: 20px;
             font-size: 14px;
+            z-index: 10;
         }
         .status-dot {
             display: inline-block;
@@ -121,6 +123,16 @@
         .log-entry { margin: 3px 0; color: #666; }
         .log-entry.new { color: #00ff88; }
         
+        .no-hand {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 18px;
+            text-align: center;
+        }
+        
         @media (max-width: 768px) {
             .container { grid-template-columns: 1fr; }
         }
@@ -131,11 +143,12 @@
     
     <div class="container">
         <div class="video-section">
-            <img id="video" src="/video" alt="Камера">
+            <video id="video" autoplay playsinline muted></video>
             <div class="status-overlay">
                 <span class="status-dot" id="statusDot"></span>
                 <span id="statusText">Отключено</span>
             </div>
+            <div class="no-hand" id="noHandMsg">👋 Покажи руку в камеру</div>
         </div>
         
         <div class="control-section">
@@ -150,9 +163,14 @@
         </div>
     </div>
     
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    
     <script>
         // ===== RELAY WebSocket =====
-        const RELAY_URL = "wss://robot-arm-relay-production.up.railway.app";  // ЗАМЕНИТЬ ПОСЛЕ ДЕПЛОЯ!
+        const RELAY_URL = "wss://robot-arm-relay-production.up.railway.app";
         
         let ws = null;
         let wsReady = false;
@@ -249,7 +267,96 @@
             }, 100);
         }
         
+        // ===== MediaPipe Camera =====
+        const videoElement = document.getElementById('video');
+        const noHandMsg = document.getElementById('noHandMsg');
+        
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                noHandMsg.style.display = 'none';
+                
+                const landmarks = results.multiHandLandmarks[0];
+                const angles = calculateAngles(landmarks);
+                
+                // Обновляем слайдеры и отправляем
+                angles.forEach((angle, i) => {
+                    if (i < 5) {
+                        document.getElementById(`sl-${i}`).value = angle;
+                        updatePos(i, angle);
+                    }
+                });
+            } else {
+                noHandMsg.style.display = 'block';
+            }
+        }
+        
+        function calculateAngles(landmarks) {
+            const wrist = landmarks[0];
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const indexPip = landmarks[6];
+            const middleTip = landmarks[12];
+            const middlePip = landmarks[10];
+            const ringTip = landmarks[16];
+            const ringPip = landmarks[14];
+            const pinkyTip = landmarks[20];
+            const pinkyPip = landmarks[18];
+            
+            const dist = (a, b) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+            
+            const base = 40;
+            const maxOpen = 0.12;
+            
+            return [
+                Math.round(45 + Math.min(dist(thumbTip, wrist) / 0.15, 1) * 90),
+                Math.round(base + Math.min(dist(indexTip, indexPip) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(middleTip, middlePip) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(ringTip, ringPip) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(pinkyTip, pinkyPip) / maxOpen, 1) * (180 - base))
+            ];
+        }
+        
+        // Инициализация MediaPipe Hands
+        const hands = new Hands({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }});
+        
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.5
+        });
+        
+        hands.onResults(onResults);
+        
+        // Запуск камеры
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+                videoElement.srcObject = stream;
+                log('✓ Камера запущена');
+                
+                // Обработка кадров
+                const process = async () => {
+                    if (videoElement.readyState >= 2) {
+                        await hands.send({image: videoElement});
+                    }
+                    requestAnimationFrame(process);
+                };
+                process();
+                
+            } catch (err) {
+                log(`✗ Камера: ${err.message}`);
+                noHandMsg.textContent = 'Нет доступа к камере 📵';
+                noHandMsg.style.display = 'block';
+            }
+        }
+        
         log('Запуск...');
+        startCamera();
     </script>
 </body>
 </html>

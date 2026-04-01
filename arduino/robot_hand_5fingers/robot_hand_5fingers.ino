@@ -1,16 +1,4 @@
-/*
- * Роборука - 5 пальцев
- * Arduino Uno
- * 
- * Подключение:
- * D3  → Большой палец
- * D5  → Указательный
- * D6  → Средний
- * D9  → Безымянный
- * D10 → Мизинец
- * 
- * Управление через Serial (USB или Bluetooth HC-05)
- */
+
 
 #include <Servo.h>
 
@@ -28,6 +16,16 @@ int positions[5] = {90, 90, 90, 90, 90};
 
 // Флаг первой инициализации
 bool initialized = false;
+
+// Объявления функций
+void moveTo(int targets[5], int duration);
+void moveToAll(int angle);
+void openHand();
+void grip();
+void testServos();
+void parseSetCommand(String data);
+void processCommand(String cmd);
+void printHelp();
 
 void setup() {
   Serial.begin(9600);
