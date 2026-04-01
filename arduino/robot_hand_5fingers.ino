@@ -29,6 +29,16 @@ int positions[5] = {90, 90, 90, 90, 90};
 // Флаг первой инициализации
 bool initialized = false;
 
+// Объявления функций
+void moveTo(int targets[5], int duration);
+void moveToAll(int angle);
+void openHand();
+void grip();
+void testServos();
+void parseSetCommand(String data);
+void processCommand(String cmd);
+void printHelp();
+
 void setup() {
   Serial.begin(9600);
   

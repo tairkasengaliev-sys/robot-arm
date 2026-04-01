@@ -1,5 +1,5 @@
 /*
- * Роборука - 5 пальцев (кисть)
+ * Роборука - 5 пальцев
  * Arduino Uno
  * 
  * Подключение:
@@ -8,6 +8,8 @@
  * D6  → Средний
  * D9  → Безымянный
  * D10 → Мизинец
+ * 
+ * Управление через Serial (USB или Bluetooth HC-05)
  */
 
 #include <Servo.h>
@@ -19,26 +21,19 @@ Servo servos[5];
 const int servoPins[5] = {3, 5, 6, 9, 10};
 
 // Названия пальцев
-const char* fingerNames[5] = {
-  "Thumb", "Index", "Middle", "Ring", "Pinky"
-};
+const char* fingerNames[5] = {"Thumb", "Index", "Middle", "Ring", "Pinky"};
 
 // Текущие позиции (90° = открытая ладонь)
 int positions[5] = {90, 90, 90, 90, 90};
 
-// Объявление функций (чтобы компилятор видел)
-void moveTo(int targets[5], int duration);
-void openHand();
-void grip();
-void wave();
-void testServos();
-void parseSetCommand(String data);
-void parseFingerCommand(String data);
-void processCommand(String cmd);
-void printHelp();
+// Флаг первой инициализации
+bool initialized = false;
 
 void setup() {
   Serial.begin(9600);
+  
+  // Даём время на подключение
+  delay(1000);
   
   Serial.println("=== Robot Hand - 5 Fingers ===");
   Serial.println("Initializing servos...");
@@ -48,12 +43,20 @@ void setup() {
     servos[i].attach(servoPins[i]);
     servos[i].write(positions[i]);
     delay(100);
+    Serial.print("  ");
     Serial.print(fingerNames[i]);
     Serial.println(" OK");
   }
   
-  Serial.println("\nREADY!");
-  Serial.println("Commands: OPEN | GRIP | WAVE | SET:a,b,c,d,e | STATUS");
+  initialized = true;
+  
+  Serial.println("\n✓ READY!");
+  Serial.println("\nCommands:");
+  Serial.println("  OPEN        - Open hand");
+  Serial.println("  GRIP        - Close grip");
+  Serial.println("  HOME        - All to 90°");
+  Serial.println("  SET:a,b,c,d,e - Set angles");
+  Serial.println("  STATUS      - Current positions");
   Serial.println();
 }
 
@@ -77,9 +80,9 @@ void processCommand(String cmd) {
     grip();
     Serial.println("GRIP_OK");
   }
-  else if (cmd == "WAVE") {
-    wave();
-    Serial.println("WAVE_OK");
+  else if (cmd == "HOME") {
+    moveToAll(90);
+    Serial.println("HOME_OK");
   }
   else if (cmd == "STATUS") {
     Serial.print("POS:");
@@ -92,17 +95,14 @@ void processCommand(String cmd) {
   else if (cmd.startsWith("SET:")) {
     parseSetCommand(cmd.substring(4));
   }
-  else if (cmd.startsWith("FINGER:")) {
-    parseFingerCommand(cmd.substring(7));
+  else if (cmd == "TEST") {
+    testServos();
   }
   else if (cmd == "HELP") {
     printHelp();
   }
-  else if (cmd == "TEST") {
-    testServos();
-  }
   else {
-    Serial.println("Unknown command. Send HELP for list.");
+    Serial.println("Unknown. Send HELP for list.");
   }
 }
 
@@ -118,29 +118,10 @@ void grip() {
   moveTo(grip, 800);
 }
 
-// Помахать рукой
-void wave() {
-  Serial.println("Waving...");
-  
-  for (int wave = 0; wave < 3; wave++) {
-    // Открыть
-    int open[5] = {90, 90, 90, 90, 10};
-    moveTo(open, 300);
-    delay(200);
-    
-    // Закрыть
-    int close[5] = {90, 90, 90, 90, 80};
-    moveTo(close, 300);
-    delay(200);
-  }
-  
-  openHand();
-}
-
 // Установка всех позиций
-void moveTo(int targets[5], int duration) {
+void moveTo(int targets[5], int duration = 1000) {
   int steps = 20;
-  int delayMs = duration / steps;
+  int delayMs = max(1, duration / steps);
   
   for (int step = 0; step < steps; step++) {
     for (int i = 0; i < 5; i++) {
@@ -158,7 +139,15 @@ void moveTo(int targets[5], int duration) {
     positions[i] = targets[i];
     servos[i].write(positions[i]);
   }
-  delay(100);
+  delay(50);
+}
+
+void moveToAll(int angle) {
+  int targets[5];
+  for (int i = 0; i < 5; i++) {
+    targets[i] = angle;
+  }
+  moveTo(targets, 800);
 }
 
 // Парсинг команды SET:a,b,c,d,e
@@ -178,33 +167,9 @@ void parseSetCommand(String data) {
     moveTo(values, 800);
     Serial.println("SET_OK");
   } else {
-    Serial.println("ERROR: Need 5 values (thumb,index,middle,ring,pinky)");
-  }
-}
-
-// Управление отдельным пальцем: FINGER:num,angle
-void parseFingerCommand(String data) {
-  int commaIndex = data.indexOf(',');
-  if (commaIndex > 0) {
-    int fingerNum = data.substring(0, commaIndex).toInt();
-    int angle = data.substring(commaIndex + 1).toInt();
-    
-    if (fingerNum >= 0 && fingerNum < 5) {
-      angle = constrain(angle, 0, 180);
-      positions[fingerNum] = angle;
-      servos[fingerNum].write(angle);
-      Serial.print("FINGER ");
-      Serial.print(fingerNum);
-      Serial.print(" (");
-      Serial.print(fingerNames[fingerNum]);
-      Serial.print(") = ");
-      Serial.print(angle);
-      Serial.println("° OK");
-    } else {
-      Serial.println("ERROR: Finger number must be 0-4");
-    }
-  } else {
-    Serial.println("ERROR: Use FINGER:num,angle");
+    Serial.println("ERROR: Need 5 values");
+    Serial.print("Got: ");
+    Serial.println(idx);
   }
 }
 
@@ -213,25 +178,25 @@ void testServos() {
   Serial.println("\n=== Servo Test ===");
   
   // Все в 0°
-  Serial.println("Moving all to 0°...");
+  Serial.println("Moving to 0°...");
   int zero[5] = {0, 0, 0, 0, 0};
   moveTo(zero, 1500);
   delay(1000);
   
   // Все в 90°
-  Serial.println("Moving all to 90°...");
+  Serial.println("Moving to 90°...");
   int center[5] = {90, 90, 90, 90, 90};
   moveTo(center, 1500);
   delay(1000);
   
   // Все в 180°
-  Serial.println("Moving all to 180°...");
+  Serial.println("Moving to 180°...");
   int max[5] = {180, 180, 180, 180, 180};
   moveTo(max, 1500);
   delay(1000);
   
   // Все в 90°
-  Serial.println("Moving all to 90°...");
+  Serial.println("Moving to 90°...");
   moveTo(center, 1500);
   
   Serial.println("\nTest complete!");
@@ -242,19 +207,17 @@ void printHelp() {
   Serial.println("\n=== Commands ===");
   Serial.println("OPEN        - Open hand (all 90°)");
   Serial.println("GRIP        - Close grip");
-  Serial.println("WAVE        - Wave hand");
+  Serial.println("HOME        - All to 90°");
   Serial.println("STATUS      - Show current positions");
   Serial.println("SET:a,b,c,d,e - Set angles (0-180)");
-  Serial.println("            (thumb,index,middle,ring,pinky)");
-  Serial.println("FINGER:n,a  - Set single finger (n=0-4, a=0-180)");
   Serial.println("TEST        - Test all servos");
   Serial.println("HELP        - Show this help");
   Serial.println();
-  Serial.println("Finger numbers:");
-  Serial.println("  0 = Thumb (D3)");
-  Serial.println("  1 = Index (D5)");
-  Serial.println("  2 = Middle (D6)");
-  Serial.println("  3 = Ring (D9)");
-  Serial.println("  4 = Pinky (D10)");
+  Serial.println("Pins:");
+  Serial.println("  D3  → Thumb");
+  Serial.println("  D5  → Index");
+  Serial.println("  D6  → Middle");
+  Serial.println("  D9  → Ring");
+  Serial.println("  D10 → Pinky");
   Serial.println();
 }
