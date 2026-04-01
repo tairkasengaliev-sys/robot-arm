@@ -9,8 +9,8 @@ import time
 import threading
 
 # ===== НАСТРОЙКИ =====
-RELAY_URL = "wss://твой-relay.railway.app"  # ← ВСТАВЬ СВОЙ URL ПОСЛЕ ДЕПЛОЯ!
-ARDUINO_PORT = "COM3"   # Windows: COM3 | Linux: /dev/ttyUSB0 или /dev/ttyACM0
+RELAY_URL = "wss://robot-arm-relay-production.up.railway.app"
+ARDUINO_PORT = "/dev/ttyUSB0"   # Windows: COM3 | Linux: /dev/ttyUSB0 или /dev/ttyACM0
 BAUD_RATE = 9600
 # =====================
 
