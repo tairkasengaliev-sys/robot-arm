@@ -10,7 +10,7 @@ import threading
 
 # ===== НАСТРОЙКИ =====
 RELAY_URL = "wss://robot-arm-relay-production.up.railway.app"
-ARDUINO_PORT = "/dev/ttyUSB0"   # Windows: COM3 | Linux: /dev/ttyUSB0 или /dev/ttyACM0
+ARDUINO_PORT = "/dev/ttyUSB1"   # Windows: COM3 | Linux: /dev/ttyUSB0 или /dev/ttyACM0
 BAUD_RATE = 9600
 # =====================
 

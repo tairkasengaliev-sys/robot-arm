@@ -270,6 +270,7 @@
         // ===== MediaPipe Camera =====
         const videoElement = document.getElementById('video');
         const noHandMsg = document.getElementById('noHandMsg');
+        let lastAngles = null;
         
         function onResults(results) {
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
@@ -278,13 +279,20 @@
                 const landmarks = results.multiHandLandmarks[0];
                 const angles = calculateAngles(landmarks);
                 
-                // Обновляем слайдеры и отправляем
+                // Обновляем слайдеры и отправляем на Arduino
                 angles.forEach((angle, i) => {
                     if (i < 5) {
                         document.getElementById(`sl-${i}`).value = angle;
-                        updatePos(i, angle);
+                        positions[i] = angle;
+                        document.getElementById(`val-${i}`).textContent = `${angle}°`;
                     }
                 });
+                
+                // Отправляем если изменилось
+                if (JSON.stringify(angles) !== JSON.stringify(lastAngles)) {
+                    sendPositions(angles);
+                    lastAngles = angles;
+                }
             } else {
                 noHandMsg.style.display = 'block';
             }
