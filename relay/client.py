@@ -84,7 +84,7 @@ class ArduinoController:
                 continue
             try:
                 self.serial = serial.Serial(port, self.baud_rate, timeout=1)
-                asyncio.run(asyncio.sleep(2))  # Wait for Arduino reset
+                time.sleep(2)  # Wait for Arduino reset
                 self.port = port
                 self.connected = True
                 logger.info(f"✓ Arduino: {port}")
