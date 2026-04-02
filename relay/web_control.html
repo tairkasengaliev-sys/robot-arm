@@ -3,21 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖐️ Роборука - Управление</title>
+    <meta name="description" content="Robot Hand Control Interface - 5 finger robotic hand with computer vision">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>🖐️ Robot Hand Control</title>
+    
+    <!-- Performance: Preconnect to CDN -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
     <style>
+        /* ====================================================================
+           CSS Variables for Maintainability
+           ==================================================================== */
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --accent-green: #00ff88;
+            --accent-red: #e94560;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --border-radius: 15px;
+            --transition: all 0.15s ease;
+        }
+        
+        /* ====================================================================
+           Reset & Base
+           ==================================================================== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background: #1a1a2e;
-            color: #fff;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 20px;
         }
-        h1 { margin-bottom: 20px; font-size: 28px; }
         
+        /* ====================================================================
+           Layout
+           ==================================================================== */
         .container {
             display: grid;
             grid-template-columns: 1fr 300px;
@@ -26,18 +53,27 @@
             width: 100%;
         }
         
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+        
+        /* ====================================================================
+           Video Section
+           ==================================================================== */
         .video-section {
             background: #000;
-            border-radius: 15px;
+            border-radius: var(--border-radius);
             overflow: hidden;
             position: relative;
             min-height: 480px;
         }
+        
         #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+        
         .status-overlay {
             position: absolute;
             top: 10px;
@@ -48,23 +84,30 @@
             font-size: 14px;
             z-index: 10;
         }
+        
         .status-dot {
             display: inline-block;
             width: 10px;
             height: 10px;
             border-radius: 50%;
             margin-right: 8px;
+            animation: pulse 2s infinite;
         }
-        .status-dot.connected { background: #00ff88; animation: pulse 2s infinite; }
-        .status-dot.disconnected { background: #ff4757; }
+        
+        .status-dot.connected { background: var(--accent-green); }
+        .status-dot.disconnected { background: var(--accent-red); }
+        
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
         
+        /* ====================================================================
+           Control Panel
+           ==================================================================== */
         .control-section {
-            background: #16213e;
-            border-radius: 15px;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
             padding: 20px;
         }
         
@@ -77,41 +120,58 @@
             font-weight: bold;
             cursor: pointer;
             margin-bottom: 10px;
-            transition: transform 0.1s;
+            transition: var(--transition);
         }
-        .btn:active { transform: scale(0.98); }
-        .btn-connect { background: #e94560; color: #fff; }
-        .btn-connect.connected { background: #00ff88; color: #000; }
-        .btn-action { background: #0f3460; color: #fff; }
         
-        .sliders { margin-top: 20px; }
-        .slider-item { margin-bottom: 15px; }
+        .btn:active { transform: scale(0.98); }
+        .btn-connect { background: var(--accent-red); color: #fff; }
+        .btn-connect.connected { background: var(--accent-green); color: #000; }
+        .btn-action { background: var(--bg-tertiary); color: #fff; }
+        
+        /* ====================================================================
+           Sliders
+           ==================================================================== */
+        .slider-item {
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
         .slider-label {
             display: flex;
             justify-content: space-between;
             margin-bottom: 5px;
             font-size: 14px;
         }
-        .slider-value { color: #00ff88; font-weight: bold; }
+        
+        .slider-value {
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+        
         input[type="range"] {
             width: 100%;
             height: 8px;
             -webkit-appearance: none;
-            background: #0f3460;
+            background: var(--bg-tertiary);
             border-radius: 4px;
             outline: none;
         }
+        
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 20px;
             height: 20px;
-            background: #00ff88;
+            background: var(--accent-green);
             border-radius: 50%;
             cursor: pointer;
         }
         
+        /* ====================================================================
+           Log Panel
+           ==================================================================== */
         .log {
-            margin-top: 20px;
             background: #0a0a15;
             border-radius: 10px;
             padding: 10px;
@@ -120,251 +180,304 @@
             font-family: monospace;
             font-size: 12px;
         }
-        .log-entry { margin: 3px 0; color: #666; }
-        .log-entry.new { color: #00ff88; }
         
+        .log-entry { margin: 3px 0; color: var(--text-secondary); }
+        .log-entry.new { color: var(--accent-green); }
+        
+        /* ====================================================================
+           Utility
+           ==================================================================== */
         .no-hand {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #666;
+            color: var(--text-secondary);
             font-size: 18px;
             text-align: center;
-        }
-        
-        @media (max-width: 768px) {
-            .container { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <h1>🖐️ Роборука - 5 пальцев</h1>
+    <h1>🖐️ Robot Hand - 5 Fingers</h1>
     
     <div class="container">
+        <!-- Video Section -->
         <div class="video-section">
             <video id="video" autoplay playsinline muted></video>
             <div class="status-overlay">
                 <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Отключено</span>
+                <span id="statusText">Disconnected</span>
             </div>
-            <div class="no-hand" id="noHandMsg">👋 Покажи руку в камеру</div>
+            <div class="no-hand" id="noHandMsg">👋 Show your hand</div>
         </div>
         
+        <!-- Control Panel -->
         <div class="control-section">
-            <button class="btn btn-connect" id="btnConnect">📡 Подключить</button>
-            <button class="btn btn-action" onclick="sendCommand('OPEN')">🖐 Открыть</button>
-            <button class="btn btn-action" onclick="sendCommand('GRIP')">✊ Захват</button>
-            <button class="btn btn-action" onclick="sendCommand('HOME')">🏠 Домой</button>
+            <button class="btn btn-connect" id="btnConnect">📡 Connect</button>
+            <button class="btn btn-action" onclick="app.sendCommand('OPEN')">🖐 Open</button>
+            <button class="btn btn-action" onclick="app.sendCommand('GRIP')">✊ Grip</button>
+            <button class="btn btn-action" onclick="app.sendCommand('HOME')">🏠 Home</button>
             
             <div class="sliders" id="sliders"></div>
-            
             <div class="log" id="log"></div>
         </div>
     </div>
     
-    <!-- MediaPipe Hands -->
+    <!-- MediaPipe Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     
+    <!-- Application Code -->
     <script>
-        // ===== RELAY WebSocket =====
-        const RELAY_URL = "wss://robot-arm-relay-production.up.railway.app";
+    /**
+     * ============================================================================
+     * Robot Hand Control Application
+     * ============================================================================
+     * Architecture: Module Pattern with Class-based Structure
+     * Features: WebSocket Relay, MediaPipe Hand Tracking, Real-time Control
+     * ============================================================================
+     */
+    
+    class RobotHandApp {
+        /**
+         * Configuration
+         */
+        config = {
+            relayUrl: "wss://robot-arm-relay-production.up.railway.app",
+            numFingers: 5,
+            defaultAngle: 90,
+            throttleMs: 100
+        };
         
-        let ws = null;
-        let wsReady = false;
+        /**
+         * State
+         */
+        state = {
+            ws: null,
+            wsReady: false,
+            positions: Array(5).fill(90),
+            lastAngles: null,
+            fingers: ['👍 Thumb', '☝️ Index', '🖕 Middle', '💍 Ring', '🤙 Pinky']
+        };
         
-        function connectRelay() {
-            ws = new WebSocket(RELAY_URL);
+        /**
+         * Initialize Application
+         */
+        constructor() {
+            this.initUI();
+            this.initRelay();
+            this.initCamera();
+            this.log('Application started');
+        }
+        
+        /**
+         * UI Initialization
+         */
+        initUI() {
+            const slidersDiv = document.getElementById('sliders');
             
-            ws.onopen = () => {
-                ws.send(JSON.stringify({ type: 'register', role: 'web' }));
-                wsReady = true;
-                log('✅ Relay подключён');
+            this.state.fingers.forEach((finger, i) => {
+                const item = document.createElement('div');
+                item.className = 'slider-item';
+                item.innerHTML = `
+                    <div class="slider-label">
+                        <span>${finger}</span>
+                        <span class="slider-value" id="val-${i}">${this.config.defaultAngle}°</span>
+                    </div>
+                    <input type="range" min="0" max="180" value="${this.config.defaultAngle}" 
+                           id="sl-${i}" oninput="app.updatePosition(${i}, this.value)">
+                `;
+                slidersDiv.appendChild(item);
+            });
+            
+            // Connect button
+            document.getElementById('btnConnect').onclick = () => this.toggleConnection();
+        }
+        
+        /**
+         * Relay WebSocket Connection
+         */
+        initRelay() {
+            this.connectRelay();
+        }
+        
+        connectRelay() {
+            this.state.ws = new WebSocket(this.config.relayUrl);
+            
+            this.state.ws.onopen = () => {
+                this.state.ws.send(JSON.stringify({ type: 'register', role: 'web' }));
+                this.state.wsReady = true;
+                this.updateConnectionStatus(true);
+                this.log('✅ Relay connected');
             };
             
-            ws.onmessage = (e) => {
+            this.state.ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
                 if (data.type === 'arduino_status') {
-                    const on = data.connected;
-                    const dot = document.getElementById('statusDot');
-                    const text = document.getElementById('statusText');
-                    
-                    if (on) {
-                        dot.className = 'status-dot connected';
-                        text.textContent = 'Ноутбук онлайн ✅';
-                        log('🤖 Arduino подключено!');
-                    } else {
-                        dot.className = 'status-dot disconnected';
-                        text.textContent = 'Ноутбук офлайн ❌';
-                        log('❌ Arduino отключилось');
-                    }
+                    this.updateConnectionStatus(data.connected);
                 }
             };
             
-            ws.onclose = () => {
-                wsReady = false;
-                log('🔄 Переподключение...');
-                setTimeout(connectRelay, 3000);
+            this.state.ws.onclose = () => {
+                this.state.wsReady = false;
+                this.updateConnectionStatus(false);
+                this.log('🔄 Reconnecting...');
+                setTimeout(() => this.connectRelay(), 3000);
             };
             
-            ws.onerror = () => log('⚠️ Ошибка relay');
+            this.state.ws.onerror = () => this.log('⚠️ Relay error');
         }
         
-        connectRelay();
-        
-        function sendCommand(cmd) {
-            if (!wsReady) { log('⚠️ Нет соединения с relay'); return; }
-            ws.send(JSON.stringify({ type: 'command', command: cmd }));
-            log(`→ ${cmd}`);
+        toggleConnection() {
+            if (this.state.wsReady) {
+                this.state.ws.close();
+            } else {
+                this.connectRelay();
+            }
         }
         
-        function sendPositions(positions) {
-            if (!wsReady) return;
-            ws.send(JSON.stringify({ type: 'set', positions }));
+        updateConnectionStatus(connected) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const btn = document.getElementById('btnConnect');
+            
+            dot.className = `status-dot ${connected ? 'connected' : 'disconnected'}`;
+            text.textContent = connected ? 'Laptop Online ✅' : 'Offline ❌';
+            btn.classList.toggle('connected', connected);
+            
+            this.log(connected ? '🤖 Arduino connected!' : '❌ Arduino disconnected');
         }
         
-        // ===== Интерфейс =====
-        const fingers = ['👍 Большой', '☝️ Указательный', '🖕 Средний', '💍 Безымянный', '🤙 Мизинец'];
-        let positions = [90, 90, 90, 90, 90];
-        
-        const slidersDiv = document.getElementById('sliders');
-        fingers.forEach((finger, i) => {
-            const item = document.createElement('div');
-            item.className = 'slider-item';
-            item.innerHTML = `
-                <div class="slider-label">
-                    <span>${finger}</span>
-                    <span class="slider-value" id="val-${i}">90°</span>
-                </div>
-                <input type="range" min="0" max="180" value="90" 
-                       id="sl-${i}" oninput="updatePos(${i}, this.value)">
-            `;
-            slidersDiv.appendChild(item);
-        });
-        
-        function log(msg, isNew = true) {
-            const entry = document.createElement('div');
-            entry.className = 'log-entry' + (isNew ? ' new' : '');
-            const time = new Date().toLocaleTimeString('ru-RU');
-            entry.textContent = `[${time}] ${msg}`;
-            document.getElementById('log').appendChild(entry);
-            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        /**
+         * Command Sending
+         */
+        sendCommand(cmd) {
+            if (!this.state.wsReady) {
+                this.log('⚠️ No relay connection');
+                return;
+            }
+            
+            this.state.ws.send(JSON.stringify({ type: 'command', command: cmd }));
+            this.log(`→ ${cmd}`);
         }
         
-        function updatePos(i, val) {
-            positions[i] = parseInt(val);
-            document.getElementById(`val-${i}`).textContent = `${val}°`;
-            throttledSend();
+        sendPositions(positions) {
+            if (!this.state.wsReady) return;
+            this.state.ws.send(JSON.stringify({ type: 'set', positions }));
         }
         
-        let throttleTimer = null;
-        function throttledSend() {
-            clearTimeout(throttleTimer);
-            throttleTimer = setTimeout(() => {
-                sendPositions(positions);
-            }, 100);
+        updatePosition(index, value) {
+            this.state.positions[index] = parseInt(value);
+            document.getElementById(`val-${index}`).textContent = `${value}°`;
+            this.throttledSend();
         }
         
-        // ===== MediaPipe Camera =====
-        const videoElement = document.getElementById('video');
-        const noHandMsg = document.getElementById('noHandMsg');
-        let lastAngles = null;
+        throttleTimer = null;
+        throttledSend() {
+            clearTimeout(this.throttleTimer);
+            this.throttleTimer = setTimeout(() => {
+                this.sendPositions(this.state.positions);
+            }, this.config.throttleMs);
+        }
         
-        function onResults(results) {
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        /**
+         * MediaPipe Camera
+         */
+        initCamera() {
+            const hands = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            });
+            
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.5
+            });
+            
+            hands.onResults((results) => this.onHandResults(results));
+            
+            // Start camera
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+            }).then((stream) => {
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                this.log('✓ Camera started');
+                
+                const process = async () => {
+                    if (video.readyState >= 2) {
+                        await hands.send({ image: video });
+                    }
+                    requestAnimationFrame(process);
+                };
+                process();
+            }).catch((err) => {
+                this.log(`✗ Camera: ${err.message}`);
+                document.getElementById('noHandMsg').textContent = '📵 No camera access';
+            });
+        }
+        
+        onHandResults(results) {
+            const noHandMsg = document.getElementById('noHandMsg');
+            
+            if (results.multiHandLandmarks?.length > 0) {
                 noHandMsg.style.display = 'none';
-                
                 const landmarks = results.multiHandLandmarks[0];
-                const angles = calculateAngles(landmarks);
+                const angles = this.calculateAngles(landmarks);
                 
-                // Обновляем слайдеры и отправляем на Arduino
+                // Update UI and send
                 angles.forEach((angle, i) => {
                     if (i < 5) {
                         document.getElementById(`sl-${i}`).value = angle;
-                        positions[i] = angle;
+                        this.state.positions[i] = angle;
                         document.getElementById(`val-${i}`).textContent = `${angle}°`;
                     }
                 });
                 
-                // Отправляем если изменилось
-                if (JSON.stringify(angles) !== JSON.stringify(lastAngles)) {
-                    sendPositions(angles);
-                    lastAngles = angles;
+                // Send if changed
+                const anglesStr = JSON.stringify(angles);
+                if (anglesStr !== JSON.stringify(this.state.lastAngles)) {
+                    this.sendPositions(angles);
+                    this.state.lastAngles = angles;
                 }
             } else {
                 noHandMsg.style.display = 'block';
             }
         }
         
-        function calculateAngles(landmarks) {
-            const wrist = landmarks[0];
-            const thumbTip = landmarks[4];
-            const indexTip = landmarks[8];
-            const indexPip = landmarks[6];
-            const middleTip = landmarks[12];
-            const middlePip = landmarks[10];
-            const ringTip = landmarks[16];
-            const ringPip = landmarks[14];
-            const pinkyTip = landmarks[20];
-            const pinkyPip = landmarks[18];
-            
+        calculateAngles(landmarks) {
             const dist = (a, b) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-            
             const base = 40;
             const maxOpen = 0.12;
             
             return [
-                Math.round(45 + Math.min(dist(thumbTip, wrist) / 0.15, 1) * 90),
-                Math.round(base + Math.min(dist(indexTip, indexPip) / maxOpen, 1) * (180 - base)),
-                Math.round(base + Math.min(dist(middleTip, middlePip) / maxOpen, 1) * (180 - base)),
-                Math.round(base + Math.min(dist(ringTip, ringPip) / maxOpen, 1) * (180 - base)),
-                Math.round(base + Math.min(dist(pinkyTip, pinkyPip) / maxOpen, 1) * (180 - base))
+                Math.round(45 + Math.min(dist(landmarks[4], landmarks[0]) / 0.15, 1) * 90),
+                Math.round(base + Math.min(dist(landmarks[8], landmarks[6]) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(landmarks[12], landmarks[10]) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(landmarks[16], landmarks[14]) / maxOpen, 1) * (180 - base)),
+                Math.round(base + Math.min(dist(landmarks[20], landmarks[18]) / maxOpen, 1) * (180 - base))
             ];
         }
         
-        // Инициализация MediaPipe Hands
-        const hands = new Hands({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        }});
-        
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.5
-        });
-        
-        hands.onResults(onResults);
-        
-        // Запуск камеры
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-                });
-                videoElement.srcObject = stream;
-                log('✓ Камера запущена');
-                
-                // Обработка кадров
-                const process = async () => {
-                    if (videoElement.readyState >= 2) {
-                        await hands.send({image: videoElement});
-                    }
-                    requestAnimationFrame(process);
-                };
-                process();
-                
-            } catch (err) {
-                log(`✗ Камера: ${err.message}`);
-                noHandMsg.textContent = 'Нет доступа к камере 📵';
-                noHandMsg.style.display = 'block';
-            }
+        /**
+         * Logging
+         */
+        log(msg, isNew = true) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (isNew ? ' new' : '');
+            const time = new Date().toLocaleTimeString('ru-RU');
+            entry.textContent = `[${time}] ${msg}`;
+            const log = document.getElementById('log');
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
         }
-        
-        log('Запуск...');
-        startCamera();
+    }
+    
+    // Start Application
+    const app = new RobotHandApp();
     </script>
 </body>
 </html>
